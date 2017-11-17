@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jnlp spec="1.0+" codebase="https://wscstest.000webhostapp.com/" href="websocket_smartcard_signer.jnlp">
+<jnlp spec="1.0+" codebase="https://wscs.000webhostapp.com/" href="websocket_smartcard_signer.jnlp">
     
     <information>
         <title>Websocket Smartcard Signer</title>
