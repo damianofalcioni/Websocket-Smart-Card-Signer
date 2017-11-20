@@ -90,10 +90,8 @@ public class SmartCardAccessIaikImpl implements SmartCardAccessI{
         pkcs11Module.initialize(null);
         
         Slot[] slotList = pkcs11Module.getSlotList(Module.SlotRequirement.TOKEN_PRESENT);
-        if(slotList.length==0){
-            pkcs11Module.finalize(null);
+        if(slotList.length==0)
             throw new Exception("Unable to find smart card using library " + library);
-        }
 
         ArrayList<Long> retArrLst = new ArrayList<Long>();
         
@@ -144,28 +142,31 @@ public class SmartCardAccessIaikImpl implements SmartCardAccessI{
         ArrayList<CertificateData> ret = new ArrayList<CertificateData>();
         
         session = getSlot(slotID).getToken().openSession(Token.SessionType.SERIAL_SESSION, Token.SessionReadWriteBehavior.RO_SESSION, null, null);
-        
-        session.findObjectsInit(new X509PublicKeyCertificate());
-        iaik.pkcs.pkcs11.objects.Object[] publicKeyCertificateObjectList = session.findObjects(1024);
-
-        for(iaik.pkcs.pkcs11.objects.Object publicKeyCertificateObject : publicKeyCertificateObjectList){
-            X509PublicKeyCertificate publicKeyCertificate = (X509PublicKeyCertificate) publicKeyCertificateObject;
-            byte[] id = publicKeyCertificate.getId().getByteArrayValue();
-            byte[] label = publicKeyCertificate.getLabel().toString(false).getBytes();
-            byte[] certBytes = publicKeyCertificate.getValue().getByteArrayValue();
-            X509Certificate cert = X509Utils.getX509Certificate(certBytes);
-            if(!(cert.getKeyUsage()[0] || cert.getKeyUsage()[1]))
-                continue;
+        try {
+            session.findObjectsInit(new X509PublicKeyCertificate());
+            iaik.pkcs.pkcs11.objects.Object[] publicKeyCertificateObjectList = session.findObjects(1024);
+    
+            for(iaik.pkcs.pkcs11.objects.Object publicKeyCertificateObject : publicKeyCertificateObjectList){
+                X509PublicKeyCertificate publicKeyCertificate = (X509PublicKeyCertificate) publicKeyCertificateObject;
+                byte[] id = publicKeyCertificate.getId().getByteArrayValue();
+                byte[] label = publicKeyCertificate.getLabel().toString(false).getBytes();
+                byte[] certBytes = publicKeyCertificate.getValue().getByteArrayValue();
+                X509Certificate cert = X509Utils.getX509Certificate(certBytes);
+                if(!(cert.getKeyUsage()[0] || cert.getKeyUsage()[1]))
+                    continue;
+                
+                CertificateData cd = new CertificateData();
+                cd.certID = id;
+                cd.certLABEL = label;
+                cd.cert = cert;
+                ret.add(cd);
+            }
             
-            CertificateData cd = new CertificateData();
-            cd.certID = id;
-            cd.certLABEL = label;
-            cd.cert = cert;
-            ret.add(cd);
+            return ret;
+        } finally {
+            session.closeSession();
+            session = null;
         }
-        session.closeSession();
-        session = null;
-        return ret;
     }
     
     public long login(long slotID, String pin) throws Exception, Error{

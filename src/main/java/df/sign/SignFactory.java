@@ -22,11 +22,12 @@ import java.util.List;
 import df.sign.datastructure.Data;
 import df.sign.pkcs11.CertificateData;
 import df.sign.pkcs11.SmartCardAccessManagerFactory;
+import df.sign.pkcs11.SmartCardAccessManagerFactory.PKCS11AccessMethod;
 import df.sign.server.WebSocketServer;
 
 public class SignFactory {
 
-    public static boolean useJna = true;
+    public static PKCS11AccessMethod pkcs11AccessMethod = SmartCardAccessManagerFactory.PKCS11AccessMethod.JNA;
     
     private static SignEngine signEngine = null;
     private static SignUI signUI = null;
@@ -40,7 +41,7 @@ public class SignFactory {
     
     public static SignEngine getUniqueEngine() throws Exception{
         if(signEngine == null)
-            signEngine = new SignEngine(SmartCardAccessManagerFactory.getSmartCardAccessManager(useJna), SignUtils.standardDllList);
+            signEngine = new SignEngine(SmartCardAccessManagerFactory.getSmartCardAccessManager(pkcs11AccessMethod), SignUtils.standardDllList);
         return signEngine;
     }
     

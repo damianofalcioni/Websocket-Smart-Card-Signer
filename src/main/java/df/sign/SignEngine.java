@@ -104,71 +104,76 @@ public class SignEngine {
         
         certData = checkAlternativeLibraries(pin, certData, digestOIDToUse);
         
-        long[] slotList = smartCardAccessManager.connectToLibrary(certData.dll);
-        if(!SignUtils.isContainedIntoArray(certData.slot, slotList))
-            throw new Exception("Impossible to use the slot " + certData.slot + " with the library " + certData.dll);
-        
-        long sessionId = smartCardAccessManager.login(certData.slot, pin);
-        
-        for(Data dataToSign : dataToSignList){
+        try {
+            long[] slotList = smartCardAccessManager.connectToLibrary(certData.dll);
+            if(!SignUtils.isContainedIntoArray(certData.slot, slotList))
+                throw new Exception("Impossible to use the slot " + certData.slot + " with the library " + certData.dll);
             
-            String contentId = dataToSign.id;
-            SignConfig signConfig = dataToSign.config;
+            long sessionId = smartCardAccessManager.login(certData.slot, pin);
+            try {
+                for(Data dataToSign : dataToSignList){
+                    
+                    String contentId = dataToSign.id;
+                    SignConfig signConfig = dataToSign.config;
+                    
+                    PDFManager pdfManager = null;
+                    byte[] unsignedContent  = dataToSign.data;
+                    byte[] dataToHash = unsignedContent;
+                    
+                    if(PKCS7Manager.isPKCS7File(unsignedContent)){
+                        signConfig.saveAsPDF = false;
+                        byte[] tmp = PKCS7Manager.extractData(unsignedContent);
+                        if(tmp.length!=0)
+                            dataToHash = tmp;
+                    } else if(PDFManager.isAPdf(unsignedContent) && !signConfig.signPdfAsP7m){
+                        signConfig.saveAsPDF = true;
+                        pdfManager = new PDFManager(unsignedContent, certData.cert);
+                        pdfManager.setDateTime(timeNow);
+                        if(signConfig.visibleSignature)
+                            pdfManager.setVisibleSignature(signConfig.pageNumToSign, signConfig.signPosition);
+                        pdfManager.preClose();
+                        dataToHash = pdfManager.getDataToHashAndSign();
+                    }
+                    
+                    byte[] hash = SignUtils.calculateHASH(digestOIDToUse, dataToHash);
+                    byte[] hashToSign = SignUtils.calculateHASH(digestOIDToUse, CMSSignedDataWrapper.getDataToSign(hash, timeNow, certData.cert));
+                    hashToSign = CMSSignedDataWrapper.getDigestInfoToSign(digestOIDToUse, hashToSign);
+                    
+                    byte[] signature = smartCardAccessManager.signData(sessionId, certData.certID, certData.certLABEL, hashToSign);
+                    
+                    byte[] signedContent = null;
+                    if(pdfManager == null){
+                        signedContent = PKCS7Manager.buildPKCS7(digestOIDToUse, unsignedContent, certData.cert, signature, hash, timeNow);
+                    }else{
+                        pdfManager.buildSignedPDF(digestOIDToUse, signature, hash);
+                        int csize = pdfManager.getContentsSize();
+                        //The first signature is used only to evaluate csize, then the second signature is applied with the correct csize
+                        pdfManager = new PDFManager(unsignedContent, certData.cert);
+                        pdfManager.setDateTime(timeNow);
+                        if(signConfig.visibleSignature)
+                            pdfManager.setVisibleSignature(signConfig.pageNumToSign, signConfig.signPosition);
+                        pdfManager.setContentsSize(csize);
+                        pdfManager.preClose();
+                        dataToHash = pdfManager.getDataToHashAndSign();
+                        hash = SignUtils.calculateHASH(digestOIDToUse, dataToHash);
+                        hashToSign = hash;
+                        hashToSign = SignUtils.calculateHASH(digestOIDToUse, CMSSignedDataWrapper.getDataToSign(hash, timeNow, certData.cert));
+                        hashToSign = CMSSignedDataWrapper.getDigestInfoToSign(digestOIDToUse, hashToSign);
+                        signature = smartCardAccessManager.signData(sessionId, certData.certID, certData.certLABEL, hashToSign);
+                        
+                        signedContent = pdfManager.buildSignedPDF(digestOIDToUse, signature, hash);
+                        new PDFManager(signedContent, null).isCorrectlySigned();
+                    }
+                    
+                    dataSignedList.add(new Data(contentId, signedContent, signConfig));
+                }
             
-            PDFManager pdfManager = null;
-            byte[] unsignedContent  = dataToSign.data;
-            byte[] dataToHash = unsignedContent;
-            
-            if(PKCS7Manager.isPKCS7File(unsignedContent)){
-                signConfig.saveAsPDF = false;
-                byte[] tmp = PKCS7Manager.extractData(unsignedContent);
-                if(tmp.length!=0)
-                    dataToHash = tmp;
-            } else if(PDFManager.isAPdf(unsignedContent) && !signConfig.signPdfAsP7m){
-                signConfig.saveAsPDF = true;
-                pdfManager = new PDFManager(unsignedContent, certData.cert);
-                pdfManager.setDateTime(timeNow);
-                if(signConfig.visibleSignature)
-                    pdfManager.setVisibleSignature(signConfig.pageNumToSign, signConfig.signPosition);
-                pdfManager.preClose();
-                dataToHash = pdfManager.getDataToHashAndSign();
+            } finally {
+                smartCardAccessManager.closeSession(sessionId);
             }
-            
-            byte[] hash = SignUtils.calculateHASH(digestOIDToUse, dataToHash);
-            byte[] hashToSign = SignUtils.calculateHASH(digestOIDToUse, CMSSignedDataWrapper.getDataToSign(hash, timeNow, certData.cert));
-            hashToSign = CMSSignedDataWrapper.getDigestInfoToSign(digestOIDToUse, hashToSign);
-            
-            byte[] signature = smartCardAccessManager.signData(sessionId, certData.certID, certData.certLABEL, hashToSign);
-            
-            byte[] signedContent = null;
-            if(pdfManager == null){
-                signedContent = PKCS7Manager.buildPKCS7(digestOIDToUse, unsignedContent, certData.cert, signature, hash, timeNow);
-            }else{
-                pdfManager.buildSignedPDF(digestOIDToUse, signature, hash);
-                int csize = pdfManager.getContentsSize();
-                //The first signature is used only to evaluate csize, then the second signature is applied with the correct csize
-                pdfManager = new PDFManager(unsignedContent, certData.cert);
-                pdfManager.setDateTime(timeNow);
-                if(signConfig.visibleSignature)
-                    pdfManager.setVisibleSignature(signConfig.pageNumToSign, signConfig.signPosition);
-                pdfManager.setContentsSize(csize);
-                pdfManager.preClose();
-                dataToHash = pdfManager.getDataToHashAndSign();
-                hash = SignUtils.calculateHASH(digestOIDToUse, dataToHash);
-                hashToSign = hash;
-                hashToSign = SignUtils.calculateHASH(digestOIDToUse, CMSSignedDataWrapper.getDataToSign(hash, timeNow, certData.cert));
-                hashToSign = CMSSignedDataWrapper.getDigestInfoToSign(digestOIDToUse, hashToSign);
-                signature = smartCardAccessManager.signData(sessionId, certData.certID, certData.certLABEL, hashToSign);
-                
-                signedContent = pdfManager.buildSignedPDF(digestOIDToUse, signature, hash);
-                new PDFManager(signedContent, null).isCorrectlySigned();
-            }
-            
-            dataSignedList.add(new Data(contentId, signedContent, signConfig));
+        } finally {
+            smartCardAccessManager.disconnectLibrary();
         }
-        
-        smartCardAccessManager.closeSession(sessionId);
-        smartCardAccessManager.disconnectLibrary();
         
         return this;
     }
@@ -218,6 +223,7 @@ public class SignEngine {
                 slotList = smartCardAccessManager.connectToLibrary(dllFullPath);
             }catch(Exception ex){
                 //ex.printStackTrace();
+                smartCardAccessManager.disconnectLibrary();
                 System.err.println(ex.getMessage());
                 continue;
             }

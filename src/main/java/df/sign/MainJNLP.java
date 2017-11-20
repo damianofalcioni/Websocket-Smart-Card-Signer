@@ -22,7 +22,7 @@ public class MainJNLP {
     public static void main(String[] args) {
         try{
             SignFactory.getUniqueWebSocketServer().serverThreadStart();
-            SignUI.createTrayIcon();
+            SignFactory.getUniqueUI().createTrayIcon();
         }catch(Exception ex){
             ex.printStackTrace();
             SignUI.showErrorMessage(ex.getMessage());

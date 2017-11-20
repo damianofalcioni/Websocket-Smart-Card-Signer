@@ -67,7 +67,35 @@ public class CMSSignedDataWrapper {
     private ArrayList<ASN1Encodable> crlList = new ArrayList<ASN1Encodable>();
     private CMSProcessable content;
     private boolean encapsulate = true;
+    
+    private static ASN1Set buildSignedAttributes(byte[] hash, Date dateTime, X509Certificate cert) throws Exception {
+        ASN1EncodableVector v = new ASN1EncodableVector();
+        v.add(new Attribute(CMSAttributes.contentType, new DERSet(PKCSObjectIdentifiers.data)));
+        if (dateTime != null)
+            v.add(new Attribute(CMSAttributes.signingTime, new DERSet(new Time(dateTime))));
+        v.add(new Attribute(CMSAttributes.messageDigest, new DERSet(new DEROctetString(hash))));
 
+        // CADES support section
+        ASN1EncodableVector aaV2 = new ASN1EncodableVector();
+        AlgorithmIdentifier algoId = new AlgorithmIdentifier(new ASN1ObjectIdentifier(CMSSignedDataGenerator.DIGEST_SHA256), null);
+        aaV2.add(algoId);
+        byte[] dig = SignUtils.calculateHASH(CMSSignedDataGenerator.DIGEST_SHA256, cert.getEncoded());
+        aaV2.add(new DEROctetString(dig));
+        Attribute cades = new Attribute(PKCSObjectIdentifiers.id_aa_signingCertificateV2, new DERSet(new DERSequence(new DERSequence(new DERSequence(aaV2)))));
+        v.add(cades);
+
+        ASN1Set signedAttributes = new DERSet(v);
+        return signedAttributes;
+    }
+
+    public static byte[] getDataToSign(final byte[] hash, final Date dateTime, final X509Certificate cert) throws Exception {
+        return buildSignedAttributes(hash, dateTime, cert).getEncoded(ASN1Encoding.DER);
+    }
+
+    public static byte[] getDigestInfoToSign(final String digestOID, final byte[] digestBytes) throws Exception {
+        return new org.bouncycastle.asn1.x509.DigestInfo(new AlgorithmIdentifier(new ASN1ObjectIdentifier(digestOID), DERNull.INSTANCE), digestBytes).getEncoded(ASN1Encoding.DER);
+    }
+    
     public void addSignerInformation(SignerInformation signerInf) {
         signerInfList.add(signerInf.toASN1Structure());
     }
@@ -141,34 +169,6 @@ public class CMSSignedDataWrapper {
 
     public void setEncapsulate(boolean encapsulate) {
         this.encapsulate = encapsulate;
-    }
-
-    private static ASN1Set buildSignedAttributes(byte[] hash, Date dateTime, X509Certificate cert) throws Exception {
-        ASN1EncodableVector v = new ASN1EncodableVector();
-        v.add(new Attribute(CMSAttributes.contentType, new DERSet(PKCSObjectIdentifiers.data)));
-        if (dateTime != null)
-            v.add(new Attribute(CMSAttributes.signingTime, new DERSet(new Time(dateTime))));
-        v.add(new Attribute(CMSAttributes.messageDigest, new DERSet(new DEROctetString(hash))));
-
-        // CADES support section
-        ASN1EncodableVector aaV2 = new ASN1EncodableVector();
-        AlgorithmIdentifier algoId = new AlgorithmIdentifier(new ASN1ObjectIdentifier(CMSSignedDataGenerator.DIGEST_SHA256), null);
-        aaV2.add(algoId);
-        byte[] dig = SignUtils.calculateHASH(CMSSignedDataGenerator.DIGEST_SHA256, cert.getEncoded());
-        aaV2.add(new DEROctetString(dig));
-        Attribute cades = new Attribute(PKCSObjectIdentifiers.id_aa_signingCertificateV2, new DERSet(new DERSequence(new DERSequence(new DERSequence(aaV2)))));
-        v.add(cades);
-
-        ASN1Set signedAttributes = new DERSet(v);
-        return signedAttributes;
-    }
-
-    public static byte[] getDataToSign(final byte[] hash, final Date dateTime, final X509Certificate cert) throws Exception {
-        return buildSignedAttributes(hash, dateTime, cert).getEncoded(ASN1Encoding.DER);
-    }
-
-    public static byte[] getDigestInfoToSign(final String digestOID, final byte[] digestBytes) throws Exception {
-        return new org.bouncycastle.asn1.x509.DigestInfo(new AlgorithmIdentifier(new ASN1ObjectIdentifier(digestOID), DERNull.INSTANCE), digestBytes).getEncoded(ASN1Encoding.DER);
     }
 
     public CMSSignedData buildCMSSignedData() throws Exception {

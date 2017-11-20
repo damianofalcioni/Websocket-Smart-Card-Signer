@@ -42,13 +42,12 @@ public class SmartCardAccessJnaImpl implements SmartCardAccessI {
 
     public long[] connectToLibrary(String library) throws Exception, Error{
         System.out.println("Connection to " + library);
+        
         C.NATIVE = new JNA(library);
         CE.Initialize();
         long[] slotList = CE.GetSlotList(true);
-        if(slotList.length==0){
-            CE.Finalize();
+        if(slotList.length==0)
             throw new Exception("Unable to find smart card using library " + library);
-        }
 
         ArrayList<Long> retArrLst = new ArrayList<Long>();
         for(long slot:slotList){
@@ -84,33 +83,35 @@ public class SmartCardAccessJnaImpl implements SmartCardAccessI {
         ArrayList<CertificateData> ret = new ArrayList<CertificateData>();
 
         long sessionID = CE.OpenSession(slotID, (CK_SESSION_INFO.CKF_RW_SESSION | CK_SESSION_INFO.CKF_SERIAL_SESSION), null, null);
-        
-        long[] objectIdList = CE.FindObjects(sessionID, new CKA[]{ new CKA(CKA.CLASS, CKO.CERTIFICATE)});
-        
-        for(long objectId:objectIdList){
-            CKA[] ckaId = new CKA[]{ new CKA(CKA.ID, new byte[255])};
-            CE.GetAttributeValue(sessionID, objectId, ckaId);
-            byte[] id = StringUtils.trim(ckaId[0].getValue());
+        try {
+            long[] objectIdList = CE.FindObjects(sessionID, new CKA[]{ new CKA(CKA.CLASS, CKO.CERTIFICATE)});
             
-            CKA[] ckaLabel = new CKA[]{ new CKA(CKA.LABEL, new byte[255])};
-            CE.GetAttributeValue(sessionID, objectId, ckaLabel);
-            byte[] label = StringUtils.trim(ckaLabel[0].getValue());
+            for(long objectId:objectIdList){
+                CKA[] ckaId = new CKA[]{ new CKA(CKA.ID, new byte[255])};
+                CE.GetAttributeValue(sessionID, objectId, ckaId);
+                byte[] id = StringUtils.trim(ckaId[0].getValue());
+                
+                CKA[] ckaLabel = new CKA[]{ new CKA(CKA.LABEL, new byte[255])};
+                CE.GetAttributeValue(sessionID, objectId, ckaLabel);
+                byte[] label = StringUtils.trim(ckaLabel[0].getValue());
+                
+                CKA[] ckaValue = new CKA[]{ new CKA(CKA.VALUE, new byte[2048])};
+                CE.GetAttributeValue(sessionID, objectId, ckaValue);
+                X509Certificate cert = X509Utils.getX509Certificate(ckaValue[0].getValue());
+                
+                if(!(cert.getKeyUsage()[0] || cert.getKeyUsage()[1]))
+                    continue;
+                CertificateData cd = new CertificateData();
+                cd.certID = id;
+                cd.certLABEL = label;
+                cd.cert = cert;
+                ret.add(cd);
+            }
             
-            CKA[] ckaValue = new CKA[]{ new CKA(CKA.VALUE, new byte[2048])};
-            CE.GetAttributeValue(sessionID, objectId, ckaValue);
-            X509Certificate cert = X509Utils.getX509Certificate(ckaValue[0].getValue());
-            
-            if(!(cert.getKeyUsage()[0] || cert.getKeyUsage()[1]))
-                continue;
-            CertificateData cd = new CertificateData();
-            cd.certID = id;
-            cd.certLABEL = label;
-            cd.cert = cert;
-            ret.add(cd);
+            return ret;
+        } finally {
+            CE.CloseSession(sessionID);
         }
-        
-        CE.CloseSession(sessionID);
-        return ret;
     }
     
     public long login(long slotID, String pin) throws Exception, Error{

@@ -53,27 +53,23 @@ public class SignUI {
     public boolean readAllCertificates = false;
     public String dnRestrictedSignatureName = "";
     
-    private Choice certificateComboBox = null;
-    private JButton signButton = null;
-    private JButton helpButton = null;
-    private JButton refreshCertificateButton = null;
-    
     public SignUI(SignEngine signEngine){
         this.signEngine = signEngine;
     }
 
     public CertificateData showCertificateDialog(){
         
+        final Choice certificateComboBox = new Choice();
         final JOptionPane optionPane = new JOptionPane();
         optionPane.setMessageType(JOptionPane.PLAIN_MESSAGE);
         
         JPanel panel = new JPanel();
         
-        signButton = new JButton("Sign");
+        JButton signButton = new JButton("Sign");
         signButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if(isCertificateCorrect())
+                if(isCertificateCorrect(certificateComboBox))
                     optionPane.setValue(JOptionPane.OK_OPTION);
             }
         });
@@ -86,24 +82,10 @@ public class SignUI {
             }
         });
         
-        helpButton = new JButton();
-        helpButton.addActionListener(new ActionListener(){
-            public void actionPerformed(ActionEvent e) {
-                showHelp();
-            }
-        });
-        helpButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("alert.png")));  
-        helpButton.setBorderPainted(false);  
-        helpButton.setFocusPainted(false);  
-        helpButton.setContentAreaFilled(false);
-        helpButton.setPreferredSize(new java.awt.Dimension(20, 20));
-
-        certificateComboBox = new Choice();
-        
-        refreshCertificateButton = new JButton();
+        JButton refreshCertificateButton = new JButton();
         refreshCertificateButton.addActionListener(new ActionListener(){
             public void actionPerformed(ActionEvent e) {
-                updateComboBox();
+                updateComboBox(certificateComboBox);
             }
         });
         refreshCertificateButton.setIcon(new javax.swing.ImageIcon(getClass().getResource("refresh.png")));  
@@ -114,9 +96,8 @@ public class SignUI {
         
         panel.add(certificateComboBox);
         panel.add(refreshCertificateButton);
-        panel.add(helpButton);
         
-        updateComboBox();
+        updateComboBox(certificateComboBox);
         
         optionPane.setMessage(panel);
         optionPane.setOptions(new Object[] { signButton, terminateButton});
@@ -124,6 +105,7 @@ public class SignUI {
         SignUtils.playBeeps(1);
         
         JDialog dialog = optionPane.createDialog(null, "Certificate selection");
+        dialog.setAlwaysOnTop(true);
         dialog.setVisible(true);
         
         int retval = (optionPane.getValue() instanceof Integer)?((Integer)optionPane.getValue()).intValue():-1;
@@ -136,10 +118,7 @@ public class SignUI {
         return null;
     }
     
-    private void updateComboBox(){
-        refreshCertificateButton.setEnabled(false);
-        signButton.setEnabled(false);
-        
+    private void updateComboBox(Choice certificateComboBox){
         certificateComboBox.removeAll();
         certificateComboBox.addItem("Loading Certificates...");
         certificateComboBox.select(0);
@@ -161,23 +140,17 @@ public class SignUI {
         if(certificateComboBox.getItemCount()==1){
             certificateComboBox.removeAll();
             certificateComboBox.addItem("--No Certificates Available!--");
-            //helpButton.setVisible(true);
             SignUtils.playBeeps(2);
         }
         else{
             if(certificateComboBox.getItemCount()==2){
                 certificateComboBox.remove(0);
             }
-            signButton.setEnabled(true);
             SignUtils.playBeeps(1);
         }
-        
-        refreshCertificateButton.setEnabled(true);
     }
     
-    
-    
-    private boolean isCertificateCorrect(){
+    private boolean isCertificateCorrect(Choice certificateComboBox){
         CertificateData certData = SignUtils.getCertificateDataByID((String)certificateComboBox.getSelectedItem(), signEngine.certificateList);
         
         if(certData == null){
@@ -225,8 +198,6 @@ public class SignUI {
         if(signEngine.getNumDataToSign() == 0){
             SignUtils.playBeeps(2);
             JOptionPane.showMessageDialog(null, "NO DATA TO SIGN", "ERROR", JOptionPane.ERROR_MESSAGE);
-            refreshCertificateButton.setEnabled(true);
-            signButton.setEnabled(true);
             return;
         }
  
@@ -238,7 +209,7 @@ public class SignUI {
             JOptionPane.showMessageDialog(null, "ERROR DURING THE SIGNING PROCESS:\n"+e.getMessage(), "ERROR", JOptionPane.ERROR_MESSAGE);
         }
     }
-    
+    /*
     public static String askForPIN(){
         final JPasswordField txt = new JPasswordField(8);
 
@@ -262,6 +233,63 @@ public class SignUI {
         int retval = JOptionPane.showOptionDialog(null, pan, "PIN", JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, null, null);        
         if(retval == JOptionPane.OK_OPTION) 
             return new String(txt.getPassword());
+        return null;
+    }
+    */
+    public static String askForPIN() {
+        final JOptionPane optionPane = new JOptionPane();
+        optionPane.setMessageType(JOptionPane.PLAIN_MESSAGE);
+        
+        JPanel panel = new JPanel();
+        
+        final JPasswordField txt = new JPasswordField(8);
+
+        txt.addAncestorListener(new AncestorListener(){
+            @Override
+            public void ancestorAdded(AncestorEvent arg0) {
+                arg0.getComponent().requestFocusInWindow();
+            }
+            @Override
+            public void ancestorMoved(AncestorEvent arg0) {}
+            @Override
+            public void ancestorRemoved(AncestorEvent arg0) {}
+        });
+        
+        JLabel lbl = new JLabel("Insert the PIN for the selected certificate: ");
+        panel.add(lbl);
+        panel.add(txt);
+        
+        JButton okButton = new JButton("OK");
+        okButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                optionPane.setValue(JOptionPane.OK_OPTION);
+            }
+        });
+        
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                optionPane.setValue(JOptionPane.CLOSED_OPTION);
+            }
+        });
+        
+        optionPane.setMessage(panel);
+        optionPane.setOptions(new Object[] { okButton, cancelButton});
+        
+        SignUtils.playBeeps(1);
+        
+        JDialog dialog = optionPane.createDialog(null, "PIN");
+        dialog.setAlwaysOnTop(true);
+        dialog.setVisible(true);
+        
+        int retval = (optionPane.getValue() instanceof Integer)?((Integer)optionPane.getValue()).intValue():-1;
+        dialog.dispose();
+        
+        if(retval == JOptionPane.OK_OPTION){
+            return new String(txt.getPassword());
+        }
         return null;
     }
     
@@ -405,7 +433,7 @@ public class SignUI {
         JOptionPane.showMessageDialog(null, message, "ERROR", JOptionPane.ERROR_MESSAGE);
     }
     
-    public static void createTrayIcon() throws Exception{
+    public void createTrayIcon() throws Exception{
         if(!SystemTray.isSupported())
             throw new Exception("SystemTray is not supported");
         
@@ -418,17 +446,20 @@ public class SignUI {
         final SystemTray tray = SystemTray.getSystemTray();
         
         MenuItem aboutItem = new MenuItem("About");
-        MenuItem statusItem = new MenuItem("Status");
+        MenuItem statusItem = new MenuItem("Server Status");
         MenuItem restartItem = new MenuItem("Restart Server");
         MenuItem locallyItem = new MenuItem("Sign Locally");
+        MenuItem checkItem = new MenuItem("Check Problems");
         MenuItem exitItem = new MenuItem("Exit");
         popup.add(aboutItem);
         popup.addSeparator();
-        popup.add(statusItem);
-        popup.addSeparator();
         popup.add(locallyItem);
         popup.addSeparator();
+        popup.add(statusItem);
+        popup.addSeparator();
         popup.add(restartItem);
+        popup.addSeparator();
+        popup.add(checkItem);
         popup.addSeparator();
         popup.addSeparator();
         popup.add(exitItem);
@@ -467,7 +498,7 @@ public class SignUI {
         
         aboutItem.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(null, "SMARTCARD SIGNATURE WEBSOCKET SERVER\n\nCreated by: Damiano Falcioni (damiano.falcioni@gmail.com)");
+                JOptionPane.showMessageDialog(null, "WEBSOCKET SMARTCARD SIGNER\n\nCreated by: Damiano Falcioni (damiano.falcioni@gmail.com)");
             }
         });
         
@@ -485,6 +516,12 @@ public class SignUI {
                 SignFactory.getUniqueWebSocketServer().waitStart();
                 SignFactory.getUniqueWebSocketServer().onStatusChanged(onServerStatusChanged);
                 trayIcon.setImage(new ImageIcon(SignUI.class.getResource((SignFactory.getUniqueWebSocketServer().isTerminating())?"smTrayR.png":"smTrayG.png")).getImage());
+            }
+        });
+        
+        checkItem.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                showHelp();
             }
         });
         
