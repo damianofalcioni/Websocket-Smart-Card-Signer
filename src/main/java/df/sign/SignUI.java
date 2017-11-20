@@ -18,6 +18,7 @@
 package df.sign;
 
 import java.awt.Choice;
+import java.awt.Dimension;
 import java.awt.MenuItem;
 import java.awt.PopupMenu;
 import java.awt.SystemTray;
@@ -28,6 +29,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -37,6 +39,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JScrollPane;
+import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.event.AncestorEvent;
 import javax.swing.event.AncestorListener;
@@ -299,64 +302,64 @@ public class SignUI {
         final JOptionPane optionPane = new JOptionPane();
         
         JPanel panel = new JPanel();
-        JTextArea textArea = new JTextArea();
-        JScrollPane scroll = new JScrollPane (textArea, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
-        
-        panel.add(scroll);
-        
-        textArea.setColumns(60);
-        textArea.setRows(20);
-        textArea.setEditable(false);
-        
-        String data = "";
+        panel.setLayout(new BoxLayout(panel, BoxLayout.PAGE_AXIS));
+        JTextArea txtConflicts = new JTextArea();
+        txtConflicts.setColumns(60);
+        txtConflicts.setRows(3);
+        txtConflicts.setEditable(false);
+        JScrollPane txtConflictsScroll = new JScrollPane (txtConflicts, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        panel.add(new JLabel(" "));
+        panel.add(new JLabel("JAR CONFLICTS: "));
+        panel.add(new JLabel(" "));
+        panel.add(txtConflictsScroll);
+
+        String conflicts = "No JAR conflicts identified";
         String[] conflictJARList = SignUtils.checkJarConflicts();
         if(conflictJARList.length != 0){
-            data += "Conflicts:\n";
+            conflicts = "";
             for(String conflictJAR:conflictJARList)
-                data += "- " + conflictJAR + "\n";
+                conflicts += "- " + conflictJAR + "\n";
         }
-        if(dllList.length == 0)
-            data += "The list of PKCS11 libs to use is empty\n";
-        boolean noPKCS11Found = true;
-        for(String dllListToTestSplitted: dllList)
-            if(SignUtils.getLibraryFullPath(dllListToTestSplitted) != ""){
-                noPKCS11Found = false;
-                break;
-            }
+        txtConflicts.setText(conflicts);
         
-        if(noPKCS11Found)
-            data += "NO ONE OF THE MANAGED PKCS11 LIBRARIES IS PRESENT IN THE SYSTEM\n";
-        else {
-            data += "\n  NAME\t\t    STATUS\t\t  SMARTCARD TYPE\n";
-
-            for(String dll: dllList){
-                String dllFull = SignUtils.getLibraryFullPath(dll);
-                String installed;
-                if(dllFull != null)
-                    installed = "INSTALLED";
-                else 
-                    installed = "NOT INSTALLED";
-                    
-                data += dll + "\t\t";
-                String supportedCard = SignUtils.getCardTypeFromDLL(dll);
-                if(supportedCard == "")
-                    supportedCard = "NOT MANAGED";
-                data += installed + "\t\t" + supportedCard + "\n";
-            }
-            data += "\n";
+        String[] tableColumnNames = {"LIBRARY NAME", "STATUS", "SMARTCARD TYPE"};
+        Object[][] tableData = new Object[dllList.length][3];
+        JTable table = new JTable(tableData, tableColumnNames);
+        JScrollPane tableScroll = new JScrollPane (table, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        tableScroll.setPreferredSize(new Dimension(60, 200));
+        panel.add(new JLabel(" "));
+        panel.add(new JLabel("LIBRARIES STATUS: "));
+        panel.add(new JLabel(" "));
+        panel.add(tableScroll);
+        
+        for(int i=0; i<dllList.length;i++){
+            tableData[i][0] = dllList[i];
+            tableData[i][1] = (SignUtils.getLibraryFullPath(dllList[i])!=null)?"INSTALLED":"NOT INSTALLED";
+            tableData[i][2] = (SignUtils.getCardTypeFromDLL(dllList[i])!="")?SignUtils.getCardTypeFromDLL(dllList[i]):"NOT MANAGED";
         }
         
+        JTextArea txtSmartcardInfo = new JTextArea();
+        txtSmartcardInfo.setColumns(60);
+        txtSmartcardInfo.setRows(3);
+        txtSmartcardInfo.setEditable(false);
+        JScrollPane txtSmartcardInfoScroll = new JScrollPane (txtSmartcardInfo, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        panel.add(new JLabel(" "));
+        panel.add(new JLabel("CONNECTED SMARTCARD INFOS: "));
+        panel.add(new JLabel(" "));
+        panel.add(txtSmartcardInfoScroll);
+        
+        String smartcardInfo = "";
         ArrayList<String> cardATRList = SignUtils.getConnectedCardATR();
         if(cardATRList.size()==0){
-            data += "\nSMARTCARD NOT CONNECTED\n";
+            smartcardInfo = "SMARTCARD NOT CONNECTED\n";
         }else{
-            data += "\nCONNECTED SMARTCARDS:\n";
+            smartcardInfo = "CONNECTED SMARTCARDS:\n";
             for(String cardATR:cardATRList){
                 String[] cardInfo = SignUtils.getCardInfo(cardATR);
                 if(cardInfo == null)
-                    data += "- UNKNOWN. ATR: " + cardATR + "\n";
+                    smartcardInfo += "- UNKNOWN. ATR: " + cardATR + "\n";
                 else{
-                    data += "- " + cardInfo[0] + "\tPKCS11: ";
+                    smartcardInfo += "- " + cardInfo[0] + "\tPKCS11: ";
                     String[] cardInfoDllList = cardInfo[1].split("%");
                     String urlDllInstaller = cardInfo[3];
                     String correctLibrary = "";
@@ -368,21 +371,34 @@ public class SignUI {
                         }
                     }
                     if(correctLibrary == "")
-                        data += "NOT INSTALLED-> " + dllList[0] + " DOWNLOAD URL: " + urlDllInstaller + "\n";
+                        smartcardInfo += "NOT INSTALLED-> " + dllList[0] + " DOWNLOAD URL: " + urlDllInstaller + "\n";
                     else
-                        data += "INSTALLED->" + correctLibrary + "\n";
+                        smartcardInfo += "INSTALLED->" + correctLibrary + "\n";
                 }
             }
         }
         
-        textArea.setText(data);
+        txtSmartcardInfo.setText(smartcardInfo);
         
+        JTextArea txtLog = new JTextArea();
+        txtLog.setColumns(60);
+        txtLog.setRows(10);
+        txtLog.setEditable(false);
+        JScrollPane txtLogScroll = new JScrollPane (txtLog, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        panel.add(new JLabel(" "));
+        panel.add(new JLabel("LOGS: "));
+        panel.add(new JLabel(" "));
+        panel.add(txtLogScroll);
+        try {
+            txtLog.setText(new String(IOUtils.readFile(SignUtils.logFilePath)));
+        } catch(Exception e) {}
         optionPane.setMessageType(JOptionPane.PLAIN_MESSAGE);
         optionPane.setMessage(panel);
         optionPane.setOptions(new Object[] {"OK"});
         
         JDialog dialog = optionPane.createDialog(null, "Diagnostic");
         dialog.setVisible(true);
+        dialog.setAlwaysOnTop(true);
         
         optionPane.getValue();
         dialog.dispose();

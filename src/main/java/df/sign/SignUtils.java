@@ -18,6 +18,8 @@
 package df.sign;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 import java.net.InetAddress;
 import java.security.MessageDigest;
 import java.security.Security;
@@ -32,6 +34,7 @@ import org.apache.commons.net.ntp.NTPUDPClient;
 import org.apache.commons.net.ntp.TimeInfo;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.util.io.TeeOutputStream;
 
 import df.sign.pkcs11.CertificateData;
 import df.sign.utils.StringUtils;
@@ -42,9 +45,20 @@ public class SignUtils {
     
     public static final String[] standardDllList = new String[]{"incryptoki2.dll", "bit4ipki.dll", "bit4opki.dll", "bit4xpki.dll", "OCSCryptoki.dll", "asepkcs.dll", "SI_PKCS11.dll", "cmP11.dll", "cmP11_M4.dll", "IpmPki32.dll", "IPMpkiLC.dll", "IpmPkiLU.dll", "bit4cpki.dll", "bit4p11.dll", "asepkcs.dll", "PKCS11.dll", "eTPKCS11.dll", "SSC_PKCS11.dll", "inp11lib.dll", "opensc-pkcs11.dll", "libbit4opki.so", "libbit4spki.so", "libbit4p11.so", "libbit4ipki.so", "opensc-pkcs11.so", "libeTPkcs11.so", "libopensc.dylib", "libbit4xpki.dylib", "libbit4ipki.dylib", "libbit4opki.dylib", "libASEP11.dylib", "libeTPkcs11.dylib"};    
     private static ArrayList<String[]> mapCardInfoList = new ArrayList<String[]>();
+    public static final String logFilePath = System.getProperty("java.io.tmpdir")+"websocket_smartcard_signer.log";
+    
     static {
         mapCardInfoList.add(new String[]{"Carta Raffaello 111", "bit4ipki.dll%incryptoki2.dll%libbit4ipki.so%libbit4ipki.dylib", "3BFF1800FF8131FE55006B02090200011101434E531131808E", "http://www.cartaraffaello.it/AreaDownload/tabid/80/language/it-IT/Default.aspx"});
         mapCardInfoList.add(new String[]{"Carta Raffaello 611", "bit4opki.dll%libbit4opki.so%libbit4opki.dylib", "3BFF1800008131FE45006B04050100012101434E5310318059", "http://www.cartaraffaello.it/AreaDownload/tabid/80/language/it-IT/Default.aspx"});
+    }
+    
+    public static void initLog() throws Exception {
+        File logFile = new File(logFilePath);
+        logFile.delete();
+        logFile.createNewFile();
+        
+        System.setOut(new PrintStream(new TeeOutputStream(System.out, new FileOutputStream(logFile)), true));
+        System.setErr(new PrintStream(new TeeOutputStream(System.err, new FileOutputStream(logFile)), true));
     }
     
     public static ArrayList<CertificateData> processCertificateList(ArrayList<CertificateData> certificateDataList){

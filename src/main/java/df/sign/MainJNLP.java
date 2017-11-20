@@ -21,6 +21,7 @@ public class MainJNLP {
 
     public static void main(String[] args) {
         try{
+            SignUtils.initLog();
             SignFactory.getUniqueWebSocketServer().serverThreadStart();
             SignFactory.getUniqueUI().createTrayIcon();
         }catch(Exception ex){
