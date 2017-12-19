@@ -3,7 +3,7 @@
 <head>
 <meta charset="ISO-8859-1">
 <title>Websocket Smartcard Signer Test Page</title>
-<script type="text/javascript" src="websocket_smartcard_signer_lib.js"></script>
+<script type="text/javascript" src="./websocket_smartcard_signer_lib.js"></script>
 <script type="text/javascript">
 function signTest(){
     document.getElementById('resultsTxt').value = '';
@@ -13,6 +13,7 @@ function signTest(){
     }).cleanData()
     .addDataTest()
     .addData('secondItem', 'dGVzdA==')
+    //.cleanDll().addDll('bit4ipki.dll')
     .sign(function(signedDataList){
         document.getElementById('resultsTxt').value += 'Websocket returned data : ' + JSON.stringify(signedDataList)+'\n';
     }, function(errorMessage){

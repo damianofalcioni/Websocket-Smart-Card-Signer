@@ -17,6 +17,7 @@
  */
 var websocket_smartcard_signer = {
   _dataToSignList : [],
+  _dllList : [],
   _statusLog : [],
   _logHandler : null,
   
@@ -30,6 +31,16 @@ var websocket_smartcard_signer = {
       if(!(handler instanceof Function))
           throw 'The setLogHandler paramenter must be a function';
       this._logHandler = handler;
+      return this;
+  },
+  
+  addDll : function(dllPath) {
+      this._dllList.push(dllPath);
+      return this;
+  },
+  
+  cleanDll : function(){
+      this._dllList = [];
       return this;
   },
   
@@ -86,6 +97,7 @@ var websocket_smartcard_signer = {
       }.bind(this);
       signService.onopen = function(){
           var data = {
+              dllList : this._dllList,
               dataToSign : this._dataToSignList
           };
           var dataS = JSON.stringify(data);

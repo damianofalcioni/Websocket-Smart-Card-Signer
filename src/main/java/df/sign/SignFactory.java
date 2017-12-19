@@ -62,6 +62,12 @@ public class SignFactory {
     }
     
     public static List<Data> performSign(List<Data> dataToSignList) throws Exception{
+        return performSign(dataToSignList, null);
+    }
+    
+    public static List<Data> performSign(List<Data> dataToSignList, String[] dllList) throws Exception{
+        if(dllList!=null && dllList.length!=0)
+            SignFactory.getUniqueEngine().dllList = dllList;
         SignFactory.getUniqueEngine().cleanDataToSign().loadDataToSign(dataToSignList);
         SignUI signUi = SignFactory.getUniqueUI();
         CertificateData certificateData = signUi.showCertificateDialog();
@@ -71,16 +77,20 @@ public class SignFactory {
         if(pin == null)
             throw new Exception("Process aborted");
         signUi.sign(certificateData, pin);
-        List<Data> signedDataList = SignFactory.getUniqueEngine().getSignedData();           
+        List<Data> signedDataList = SignFactory.getUniqueEngine().getSignedData();
         return signedDataList;
     }
     
     public static void performSignLocally(){
+        performSignLocally(null);
+    }
+    
+    public static void performSignLocally(String[] dllList){
         try {
             List<Data> dataToSignList = SignUI.showFileSelection();
             if(dataToSignList == null)
                 throw new Exception("Process aborted");
-            List<Data> dataSignedList = SignFactory.performSign(dataToSignList);
+            List<Data> dataSignedList = SignFactory.performSign(dataToSignList, dllList);
             SignUI.showFileSave(dataSignedList);
         } catch (Exception ex) {
             ex.printStackTrace();

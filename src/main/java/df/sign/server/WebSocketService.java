@@ -26,7 +26,10 @@ import javax.json.JsonArray;
 import javax.json.JsonArrayBuilder;
 import javax.json.JsonObject;
 import javax.json.JsonValue.ValueType;
+import javax.websocket.OnClose;
+import javax.websocket.OnError;
 import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
 
@@ -38,11 +41,35 @@ import df.sign.datastructure.SignConfig;
 
 @ServerEndpoint(value = "/sign")
 public class WebSocketService {
+    private Session session = null;
+    
+    public void sendTestData() {
+        session.getAsyncRemote().sendText("{\"dataSigned\" : []}");
+    }
+    
+    @OnOpen
+    public void open(Session session) {
+        this.session = session;
+    }
+    
+    @OnClose
+    public void onClose(Session session) {}
+    
+    @OnError
+    public void onError(Throwable exception, Session session) {}
+    
     @OnMessage
     public String startSignProcess(String message, Session session) {
         try{
             JsonObject jsonObject = Json.createReader(new StringReader(message)).readObject();
             JsonArray dataToSignArray = jsonObject.getJsonArray("dataToSign");
+            JsonArray dllList = jsonObject.getJsonArray("dllList");
+            String[] pkcs11DllList = null;
+            if(dllList != null) {
+                pkcs11DllList = new String[dllList.size()];
+                for(int i=0;i<dllList.size();i++)
+                    pkcs11DllList[i] = dllList.getString(i);
+            }
             
             List<Data> dataToSignList = new ArrayList<Data>();
 
@@ -65,7 +92,7 @@ public class WebSocketService {
                 dataToSignList.add(new Data(id, content, config));
             }
 
-            List<Data> dataSignedList = SignFactory.performSign(dataToSignList);
+            List<Data> dataSignedList = SignFactory.performSign(dataToSignList, pkcs11DllList);
             
             JsonArrayBuilder jsonArrayBuilder = Json.createArrayBuilder();
             for(Data dataSigned : dataSignedList){
