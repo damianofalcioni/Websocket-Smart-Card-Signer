@@ -26,7 +26,8 @@ More details on the features in the following.
 - Possibility to be used as standalone document signature application using the try icon menu functions
 
 ## Live DEMO
-Have a look at the [DEMO](https://wscs.000webhostapp.com/) (1h/day downtime expected)
+Have a look at the [DEMO](https://wscs.000webhostapp.com/) (1h/day downtime expected).
+
 The Jar is self-signed so in order to use the demo you must add a security exception in the java control panel for the site "https://wscs.000webhostapp.com/"
 
 ## Support Me <3
