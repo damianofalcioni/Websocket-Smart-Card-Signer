@@ -28,7 +28,7 @@ More details on the features in the following.
 ## Live DEMO
 Have a look at the [DEMO](https://damianofalcioni.github.io/Websocket-Smart-Card-Signer/examples/websocket_smartcard_signer_test_page.html).
 
-NOTE: The Jar is self-signed so in order to use the demo you must add a security exception in the java control panel for the site "https://damianofalcioni.github.io/"
+NOTE: The Jar is self-signed so in order to use the demo in JNLP mode you must add a security exception in the java control panel for the site "https://damianofalcioni.github.io/"
 
 ## Support Me <3
 [![Buy me a coffee](https://user-images.githubusercontent.com/8982949/32890053-84c4cb1e-cacd-11e7-8eb1-0b0b7f666b5c.png)](https://www.paypal.me/damianofalcioni/0.99)
