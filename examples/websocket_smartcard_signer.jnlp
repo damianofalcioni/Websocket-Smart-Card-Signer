@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jnlp spec="1.0+" codebase="https://damianofalcioni.github.io/" href="Websocket-Smart-Card-Signer/examples/websocket_smartcard_signer.jnlp">
+    
+    <information>
+        <title>Websocket Smartcard Signer</title>
+        <vendor>Damiano Falcioni</vendor>
+    </information>
+    <security>
+        <all-permissions/>
+    </security>
+    <resources>
+        <j2se version="1.6+" />
+        <jar href="websocket_smartcard_signer-jar-with-dependencies.jar"/>
+    </resources>
+    
+    <application-desc main-class="df.sign.MainJNLP"/>
+    <update check="background"/>
+</jnlp>

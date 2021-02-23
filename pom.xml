@@ -181,11 +181,6 @@
             <version>4.5.0</version>
         </dependency>
         <dependency>
-            <groupId>iaikPkcs11Wrapper</groupId>
-            <artifactId>iaikPkcs11Wrapper</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
-        </dependency>
-        <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
             <version>1.1.1</version>
@@ -199,6 +194,11 @@
             <groupId>org.pkcs11</groupId>
             <artifactId>jacknji11</artifactId>
             <version>1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>df.iaik.pkcs</groupId>
+            <artifactId>pkcs11wrapper</artifactId>
+            <version>1.4</version>
         </dependency>
     </dependencies>
 </project>
