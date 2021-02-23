@@ -163,7 +163,7 @@ public class SignUtils {
 
     public static String[] checkJarConflicts(){
         String ret = "";
-        String[] dirs = System.getProperty("java.ext.dirs").split(";");
+        String[] dirs = System.getProperty("java.ext.dirs") != null ? System.getProperty("java.ext.dirs").split(";"): new String[0];
         for(String dir:dirs){
             File[] files = new File(dir).listFiles();
             if(files == null)
