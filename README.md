@@ -31,4 +31,4 @@ Have a look at the [DEMO](https://damianofalcioni.github.io/Websocket-Smart-Card
 NOTE: The Jar is self-signed so in order to use the demo in JNLP mode you must add a security exception in the java control panel for the site "https://damianofalcioni.github.io/"
 
 ## Support Me <3
-[![Buy me a coffee](https://user-images.githubusercontent.com/8982949/32890053-84c4cb1e-cacd-11e7-8eb1-0b0b7f666b5c.png)](https://www.paypal.me/damianofalcioni/0.99)
+[![Buy me a coffee](https://user-images.githubusercontent.com/8982949/109153957-e8742b00-776d-11eb-9849-bd0ef2dde397.png)](https://www.paypal.me/damianofalcioni/0.99)
